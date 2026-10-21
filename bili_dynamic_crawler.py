@@ -43,7 +43,10 @@ import urllib.request
 
 # ------------------------------------------------ 常量
 DEFAULT_UID = 2094031249
-DEFAULT_DATA_DIR = r"E:\Projects\huoyu\data"
+# 默认数据目录跟随脚本位置，保证在 Windows 本地与 GitHub Actions
+# （Linux runner）上行为一致；也可用 --data-dir 显式覆盖。
+DEFAULT_DATA_DIR = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "data")
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
@@ -841,6 +844,21 @@ def stage_build(uid, paths, client, host_name=None, no_web_check=False):
     items = load_json(paths.list_json, [])
     cache = load_json(paths.detail_json, {})
     records, skipped = build_records(items, cache)
+
+    # 存量合并保护：列表接口对部分网络环境只放行近期约 600 条，历史动态
+    # 依赖 raw/detail_cache.json 兜底；万一缓存损坏/缺失，这里也要保证
+    # 已入库的全量数据不被本次结果砍小。以 id 为键，本次记录覆盖同 id，
+    # 存量中本次未覆盖到的记录原样保留。
+    existing = load_json(paths.all_json, [])
+    if existing:
+        fresh_ids = {str(r["id"]) for r in records}
+        kept = [r for r in existing
+                if r.get("id") and str(r["id"]) not in fresh_ids]
+        if kept:
+            log(f"  [build] 合并存量 {len(kept)} 条（本次清单未覆盖）→ "
+                f"{len(records)} + {len(kept)} = {len(records) + len(kept)} 条")
+            records = sorted(records + kept,
+                             key=lambda r: (r["pub_ts"] is None, -(r["pub_ts"] or 0)))
 
     by_year = {}
     for r in records:

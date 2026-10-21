@@ -1,9 +1,15 @@
 # 这个仓库只放两样东西：
 #   1) 静态站点本身（site/：代码 + 数据 + 图片）
-#   2) 每日更新必需的采集/构建/翻译脚本与译文真值
-# 其余一律不入库：原始抓取数据 data/（67MB，含 raw 缓存与详情缓存）、
+#   2) 每日更新必需的采集/构建/翻译脚本、译文真值、全量基线数据
+# 其余一律不入库：原始抓取数据 data/ 里除基线外的部分（媒体 41MB 等）、
 # 调试截图 .shots/ 与 shots/（200MB+）、版本快照 _versions/、素材与归档
 # （music/ video/ ref/ back/ _archive/，合计 1.3GB）、译文备份与审计报告。
+#
+# 为什么必须提交「全量基线数据」：
+#   B 站 opus/feed/space 列表接口对境外 IP（GitHub Actions runner）只放行
+#   近期约 600 条。若不提交基线，每日工作流会把 2165 条的全量数据砍成
+#   600 条。提交 dynamics/all.json + raw/detail_cache.json（合计约 2.6MB）
+#   后，runner 每次只抓新增的几条，历史部分由基线 + build 阶段合并保住。
 
 # 先全部忽略，再逐条放行
 /*
@@ -21,7 +27,23 @@
 !/apply_fixes.py
 !/mark_ai_translations.py
 !/fix_translations.py
+!/fetch_media_thumbs.py
+!/fetch_covers.py
 !/mood.py
+
+# ---- 全量基线数据（每日更新的起点，见文件头说明）----
+!/data
+/data/*
+!/data/bilibili
+/data/bilibili/*
+!/data/bilibili/2094031249
+/data/bilibili/2094031249/*
+!/data/bilibili/2094031249/dynamics
+/data/bilibili/2094031249/dynamics/*
+!/data/bilibili/2094031249/dynamics/all.json
+!/data/bilibili/2094031249/raw
+/data/bilibili/2094031249/raw/*
+!/data/bilibili/2094031249/raw/detail_cache.json
 
 # ---- 译文：只留真值与增量翻译所需，备份与审计报告不入库 ----
 !/translation

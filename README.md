@@ -15,11 +15,17 @@ site/                     静态站点（代码 + 数据 + 图片），直接托
   assets/data/            posts.json（2165 条动态）· meta.json · guards.json
   assets/images/media/    动态附图（480w 列表 / 1080w 灯箱，414 张）
 
+data/                     全量基线数据（每日更新的起点，不入库的其余部分见 .gitignore）
+  bilibili/2094031249/dynamics/all.json       2165 条全量动态
+  bilibili/2094031249/raw/detail_cache.json   详情缓存（历史动态的 id 兜底来源）
+
 bili_dynamic_crawler.py   采集：B站动态清单 + 逐条详情，WBI 签名、限速、断点续跑
 translate_dynamics.py     翻译：ja→zh 机翻 + 术语占位符 + 正则矫正（只补缺失）
 build_site_data.py        构建：原始数据 → site/assets/data/（含媒体拷贝与去重）
 apply_fixes.py            回写人工确认过的译文（translation/fixes.json）
 mark_ai_translations.py   给 AI 译文打统一标注，产出 translation/ai_notice.json
+fetch_media_thumbs.py     抓取新增动态配图（480w/1080w 两档 WebP，只补缺失）
+fetch_covers.py           抓取新增视频封面缩略图（只补缺失）
 
 translation/
   ja2zh.json              译文库 {动态ID: 中文}（AI 机翻，见下方免责说明）
@@ -28,18 +34,35 @@ translation/
 
 .github/workflows/
   daily-update.yml        北京时间每天 0:30 自动抓新数据 → 补译 → 重建 → 提交
+  deploy-pages.yml        把 site/ 发布到 GitHub Pages（根路径，不经 Jekyll）
 ```
 
 ## 每日更新
 
 `.github/workflows/daily-update.yml` 在 UTC 16:30（= 北京时间 0:30）跑一次：
 
-1. `bili_dynamic_crawler.py` 抓最新动态（原始缓存存在 Actions Cache，只抓增量）；
+1. `bili_dynamic_crawler.py` 抓最新动态——**全量基线数据已随仓库提交**
+   （`data/bilibili/2094031249/dynamics/all.json` + `raw/detail_cache.json`），
+   只抓新增条目；B 站列表接口对境外 IP 只放行近期约 600 条，历史部分由基线
+   与构建阶段的存量合并保住，数据只增不减；
 2. `translate_dynamics.py` 只补新增条目的译文，`apply_fixes.py` 盖回人工修正；
-3. `build_site_data.py` 重建 `site/assets/data/` 并同步新增附图到 `media/`；
-4. 有变化才提交（提交者 `github-actions[bot]`）。
+3. `fetch_media_thumbs.py` / `fetch_covers.py` 补齐新增配图与视频封面；
+4. `build_site_data.py` 重建 `site/assets/data/`，`mark_ai_translations.py` 同步标注统计；
+5. 有变化才提交（提交者 `github-actions[bot]`），基线数据增量一并入库。
 
 也可在 Actions 页手动 `Run workflow` 立刻补一次。
+
+## 站点部署
+
+Pages 源设置为 **GitHub Actions**（Settings → Pages → Source），
+由 `.github/workflows/deploy-pages.yml` 把 `site/` 原样发布到根路径：
+
+- 本地推代码到 `main` → 自动重新部署；
+- 每日数据更新提交后，经 `workflow_run` 触发自动重新部署
+  （机器人推送不触发 push 事件，必须这样接）；
+- 也可手动 `Run workflow` 补一次。
+
+不经 Jekyll、不复制文件，`https://<用户名>.github.io/gift-for-huoyu/` 直接就是站点首页。
 
 ## 本地复现
 

@@ -23,18 +23,13 @@ jobs:
         with:
           python-version: '3.12'
 
-      # 原始抓取数据（清单/详情缓存 + 媒体）不进仓库，用 Actions 缓存跨天保留：
-      # 有了它每天只抓新增的几条，没它就整库重抓一次（约 40~55 分钟）。
-      - name: 恢复抓取缓存
-        uses: actions/cache@v4
-        with:
-          path: data/bilibili
-          key: bili-data-${{ github.run_id }}
-          restore-keys: |
-            bili-data-
-
+      # 全量基线数据（dynamics/all.json + raw/detail_cache.json）已随仓库提交，
+      # runner 无需重抓历史：列表接口对境外 IP 只放行近期约 600 条，历史部分
+      # 由基线 + build 阶段的存量合并保住，这里每天只抓新增的几个条目。
+      # 注意：不要再用 actions/cache 缓存 data/bilibili——旧缓存会把境外
+      # IP 抓到的 600 条版本盖回已提交的 2165 条基线，造成数据丢失。
       - name: 拉取最新动态
-        run: python bili_dynamic_crawler.py --pace 1.2
+        run: python bili_dynamic_crawler.py --pace 1.2 --no-web-check
 
       # translate_dynamics.py 天然跳过已有译文，只会补新增的几条；
       # apply_fixes.py 再把人工确认过的译文盖回去（防机翻冲掉人工真值）。
@@ -42,6 +37,13 @@ jobs:
         run: |
           python translate_dynamics.py
           python apply_fixes.py
+
+      # 新增动态的配图/视频封面（只补缺失的文件，已存在的跳过；
+      # 单个图片失败不影响整体，退出码恒为 0）
+      - name: 抓取新增图片
+        run: |
+          python fetch_media_thumbs.py
+          python fetch_covers.py
 
       - name: 重建站点数据
         run: python build_site_data.py
@@ -54,7 +56,8 @@ jobs:
           set -e
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A site/assets/data site/assets/images/media translation/ja2zh.json translation/ai_notice.json
+          git add -A site/assets/data site/assets/images/media translation/ja2zh.json translation/ai_notice.json \
+                    data/bilibili/2094031249/dynamics/all.json data/bilibili/2094031249/raw/detail_cache.json
           if git diff --cached --quiet; then
             echo "数据无变化，跳过提交"
             exit 0

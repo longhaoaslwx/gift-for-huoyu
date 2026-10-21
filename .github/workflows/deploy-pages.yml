@@ -1,0 +1,43 @@
+name: 部署站点到 Pages
+
+# 三个触发源：
+#   1) push 到 main：本地改了代码/工作流后重新部署；
+#   2) workflow_run：每日更新工作流跑完后接住它——机器人（GITHUB_TOKEN）
+#      的推送不会触发 push 事件，若不靠 workflow_run，数据更新后站点不会刷新；
+#   3) workflow_dispatch：手动补一次部署。
+on:
+  push:
+    branches: [main]
+  workflow_run:
+    workflows: ["每日更新动态数据"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
+
+      # 把 site/ 原样发布到 Pages 根路径：不经 Jekyll、不复制文件，
+      # https://<用户名>.github.io/gift-for-huoyu/ 直接就是 index.html。
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

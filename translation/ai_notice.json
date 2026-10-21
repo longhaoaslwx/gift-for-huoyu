@@ -4,7 +4,7 @@
  "notice_zh": "本内容由 AI 机器翻译生成，未经人工逐条校对，含义可能不准确；请以日文原文为准，并需人工复核。",
  "notice_ja": "この翻訳は AI（機械翻訳）による自動生成です。内容が不正確な場合があります。原文を必ず参照してください。",
  "review_required": true,
- "generated_at": "2026-10-22 02:22:44",
+ "generated_at": "2026-10-22 03:47:42",
  "rule": "translation/ja2zh.json 中除 human_confirmed_ids 以外的条目均为 AI 机器翻译，一律带本标注；human_confirmed_ids 里的是人工确认过的真值，不带 AI 标注。检索方式：grep -rn 'AI-TRANS' .",
  "summary": {
   "translated_total": 2163,
