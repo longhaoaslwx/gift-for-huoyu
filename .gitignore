@@ -1,0 +1,38 @@
+# 这个仓库只放两样东西：
+#   1) 静态站点本身（site/：代码 + 数据 + 图片）
+#   2) 每日更新必需的采集/构建/翻译脚本与译文真值
+# 其余一律不入库：原始抓取数据 data/（67MB，含 raw 缓存与详情缓存）、
+# 调试截图 .shots/ 与 shots/（200MB+）、版本快照 _versions/、素材与归档
+# （music/ video/ ref/ back/ _archive/，合计 1.3GB）、译文备份与审计报告。
+
+# 先全部忽略，再逐条放行
+/*
+
+!/.gitignore
+!/.gitattributes
+!/.github
+!/README.md
+!/site
+
+# ---- 采集 / 构建 / 翻译脚本（每日更新工作流要用）----
+!/bili_dynamic_crawler.py
+!/build_site_data.py
+!/translate_dynamics.py
+!/apply_fixes.py
+!/mark_ai_translations.py
+!/fix_translations.py
+!/mood.py
+
+# ---- 译文：只留真值与增量翻译所需，备份与审计报告不入库 ----
+!/translation
+/translation/*
+!/translation/fixes.json
+!/translation/ja2zh.json
+!/translation/glossary_patch.json
+!/translation/ai_notice.json
+!/translation/ja2zh.README.md
+
+# 本地环境产物
+__pycache__/
+*.pyc
+.pytest_cache/

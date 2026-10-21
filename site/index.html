@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>火羽ひのめ · B站动态全记录</title>
+<meta name="description" content="火羽ひのめ B站动态全记录 · 2162 条动态的时间轴、轮盘与全文检索。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%230b0908'/%3E%3Cpath d='M32 10c7 12 15 18 15 26a15 15 0 0 1-30 0c0-8 8-14 15-26z' fill='none' stroke='%23d8412c' stroke-width='3'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- 只取英数与日文：Noto Serif SC 按 Unicode 分片，首屏会多下 ~800KB 且国内常连不上，
+     中文改用系统衬线栈（见 CSS 的 --serif） -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Shippori+Mincho:wght@500;700;800&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+<link rel="stylesheet" href="assets/stage.css">
+</head>
+<body>
+<div class="grain" aria-hidden="true"></div>
+
+<!-- ============ 首屏 ============ -->
+<section class="hero" id="hero">
+  <div class="hero-bg" aria-hidden="true"></div>
+  <div class="hero-veil" aria-hidden="true"></div>
+  <!-- 氛围气泡层：左右两侧随机浮现的中文短句，纯装饰（JS 注入，见 app.js startHeroBubbles） -->
+  <div class="hero-bubbles" id="hero-bubbles" aria-hidden="true"></div>
+
+  <div class="hero-inner">
+    <div class="hero-mark" aria-hidden="true">
+      <svg viewBox="0 0 120 120" width="96" height="96">
+        <defs>
+          <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#ff9a6c"/>
+            <stop offset="1" stop-color="#c0261a"/>
+          </linearGradient>
+        </defs>
+        <circle cx="60" cy="60" r="56" fill="none" stroke="url(#sg)" stroke-width="1.5" opacity=".55"/>
+        <path d="M60 18 C74 40 92 52 92 70 A32 32 0 0 1 28 70 C28 52 46 40 60 18 Z"
+              fill="none" stroke="url(#sg)" stroke-width="2"/>
+        <path d="M60 40 C67 52 76 60 76 70 A16 16 0 0 1 44 70 C44 60 53 52 60 40 Z"
+              fill="url(#sg)" opacity=".22"/>
+      </svg>
+    </div>
+
+    <p class="hero-kicker">火羽ひのめ · B站动态全记录</p>
+    <h1 class="hero-title">
+      <span class="t-main">守约未停</span>
+      <span class="t-sub">时间替她告白</span>
+    </h1>
+    <p class="t-motto">时间，把守约写成最浪漫的告白</p>
+    <p class="hero-sub" id="hero-sub">2081 天，2162 条动态</p>
+    <p class="hero-dates" id="hero-dates">2021.02.01 — 2026.10.19</p>
+
+    <div class="hero-stats" id="hero-stats"></div>
+
+    <!-- 统计数字下面必须跟着来源，否则别人截图转发时就只剩一堆孤零零的数字 -->
+    <p class="hero-src" id="hero-src"></p>
+
+    <!-- href 指向 #v-ring（轮盘区块的真实 id）而不是 #ring：
+         后者在页面里根本不存在，所以这颗按钮从第一版起就点了没反应——
+         浏览器找不到锚点目标，而页面又已经在顶部，看上去就是「什么都没发生」。
+         有 JS 时由 app.js 接管，走 switchView 以便复用顶栏高度补偿与轮盘重建。 -->
+    <a class="hero-cta" id="hero-cta" href="#v-ring">
+      <span>进入时间轴</span>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <path d="M8 2v11M3.5 8.5L8 13l4.5-4.5" stroke="currentColor" stroke-width="1.6"
+              stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
+  </div>
+
+  <div class="hero-credits">
+    <span>素材：火羽ひのめ本人公开动态</span>
+    <span class="dot">·</span>
+    <a href="https://space.bilibili.com/2094031249" target="_blank" rel="noopener">space.bilibili.com/2094031249</a>
+  </div>
+</section>
+
+<!-- ============ 导航 ============ -->
+<header class="hd" id="hd">
+  <div class="hd-inner">
+    <div class="brand">
+      <!-- 头像本地化，避免 B 站 CDN 防盗链；加载失败时回退成火羽印章 -->
+      <div class="seal" aria-hidden="true">
+        <img class="seal-img" id="brand-avatar"
+             src="assets/images/avatar@2x.png"
+             srcset="assets/images/avatar.png 1x, assets/images/avatar@2x.png 2x"
+             width="128" height="128" alt="" decoding="async">
+        <span class="seal-fb">火羽</span>
+      </div>
+      <div class="bt">
+        <div class="lab">HINOME</div>
+        <div class="nm">火羽ひのめ</div>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="视图">
+      <button class="tab" role="tab" data-v="ring" aria-selected="true"><span>RING</span><small>动态环</small></button>
+      <button class="tab" role="tab" data-v="stats" aria-selected="false"><span>STATS</span><small>统计</small></button>
+      <button class="tab" role="tab" data-v="gallery" aria-selected="false"><span>GALLERY</span><small>图集</small></button>
+      <!-- v022：影像 / 录制入口下线（hidden + switchView 兜底回落），
+           恢复时去掉 hidden 即可，标签结构与视图代码原样保留 -->
+      <button class="tab" role="tab" data-v="video" aria-selected="false" hidden><span>FILM</span><small>影像</small></button>
+      <button class="tab" role="tab" data-v="stage" aria-selected="false" hidden><span>STAGE</span><small>录制</small></button>
+      <button class="tab" role="tab" data-v="archive" aria-selected="false"><span>ARCHIVE</span><small>全文</small></button>
+    </nav>
+    <div class="hd-ro" id="hd-ro"></div>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- ============ RING ============ -->
+<section id="v-ring" class="view active">
+  <div class="ring-head">
+    <div class="caption">
+      <b>动态环</b>
+      <small>每一格是一个月 · 按住拖拽拨转 · 点击展开当月动态 · 日/中一键切换，也可点条目「文A」单看</small>
+    </div>
+    <div class="playback">
+      <button class="control" id="btn-play" type="button" aria-pressed="true">暂停</button>
+      <button class="control" id="btn-speed" type="button" aria-pressed="false">速度 1×</button>
+      <button class="control" id="btn-latest" type="button">回到最新</button>
+    </div>
+  </div>
+
+  <div class="scrub" id="scrub" role="slider" tabindex="0" aria-label="时间轴：拖动转到任意月份">
+    <div class="scrub-track"><div class="scrub-fill" id="scrub-fill"></div></div>
+    <div class="scrub-cur" id="scrub-cur"></div>
+  </div>
+
+  <div class="ring-wrap">
+    <div class="dial" id="dial" role="listbox" aria-label="动态轮盘">
+      <!-- 月份牌圆环：每张月牌外圈的那道细环已换成「当月心情椿花」
+           （.mflower，见 buildDial 与 CSS），圆环本身完整保留。 -->
+      <div class="dial-core" id="dial-core"></div>
+      <div class="dial-center">
+        <!-- 火羽跑步 GIF：透明通道透出枢纽辉光；reduced-motion 下降级为静态帧 -->
+        <img class="dc-run" id="dc-run" src="assets/images/hinome-run.gif"
+             alt="火羽ひのめ 跑步的小动画" draggable="false">
+      </div>
+      <!-- 年月 / 条数：原枢纽内三行文字改为枢纽下方胶囊，给 GIF 让出整圆 -->
+      <div class="dc-cap">
+        <span class="dc-ym" id="dc-ym">——</span>
+        <span class="dc-n" id="dc-n">—</span>
+        <span class="dc-l">条动态</span>
+      </div>
+    </div>
+
+    <aside class="letter" id="letter">
+      <div class="letter-head">
+        <div class="lv-top">
+          <div class="lv-t">
+            <div class="lv-ym" id="lv-ym">——</div>
+            <div class="lv-meta" id="lv-meta"></div>
+          </div>
+          <!-- 当月语言一键切换；逐条微调仍用每条的「文A」按钮 -->
+          <div class="lv-lang" id="lv-lang" role="group" aria-label="当月语言">
+            <button class="lgb" type="button" data-l="ja" aria-pressed="true">日文</button>
+            <button class="lgb" type="button" data-l="zh" aria-pressed="false">中文</button>
+          </div>
+        </div>
+        <div class="lv-mood" id="lv-mood"></div>
+        <!-- AI-TRANS｜中文译文由机器翻译生成，未经人工逐条校对，仅供参考。
+             人工只确认过个别条目（见 translation/fixes.json）。 -->
+        <p class="lv-ainote" title="中文译文由 AI 机器翻译生成，未经人工逐条校对，含义可能不准确，请以日文原文为准。">AI 翻译 · 仅供参考</p>
+      </div>
+      <div class="letter-body" id="letter-body"></div>
+    </aside>
+  </div>
+
+  <div class="ring-foot">
+    <button id="dial-prev" type="button">← 上个月</button>
+    <button id="dial-next" type="button">下个月 →</button>
+    <span class="hint">滚轮 / 方向键微调 · 空格播放暂停</span>
+  </div>
+</section>
+
+<!-- ============ STATS ============ -->
+<section id="v-stats" class="view">
+
+  <!-- ============ 大航海 ============
+       上下分栏，整块占满一屏（减掉顶栏）：
+         上：核心展示（汇总数字 + 近 120 天走势）
+         下：可拖动浏览的在舰成员轨道
+       两块互不抢夺手势——上面只读，下面才接受拖拽。 -->
+  <div class="gh" id="gh">
+    <div class="gh-top" id="gh-top">
+      <div class="gh-bar">
+        <div class="gh-id">
+          <span class="gh-kicker">GREAT VOYAGE</span>
+          <h2 class="gh-title">大航海</h2>
+        </div>
+        <div class="gh-nums" id="gh-nums"></div>
+      </div>
+
+      <!-- 降级空态：guards.json 缺失/解析失败时显示。
+           默认 display:none，由 renderGuard() 给 .gh-top 加 is-empty 类激活，
+           同时隐藏走势图/拖动块/图例，只留标题栏说明缺了什么。 -->
+      <div class="gh-empty" id="gh-empty">
+        <b>舰长数据暂未载入</b>
+        <span>走势图与成员名单依赖 <code>assets/data/guards.json</code>，请确认文件就位后刷新；<br>
+              其它页面不受影响，可正常浏览。</span>
+      </div>
+
+      <div class="gh-plot" id="gh-plot">
+        <svg class="gh-svg" id="gh-svg" role="img"
+             aria-label="在舰人数走势：柱为每日净增，线为在舰总数，范围由下方拖动块控制"></svg>
+        <div class="gh-tip" id="gh-tip" hidden></div>
+      </div>
+
+      <!-- 范围拖动块：laplace dataZoom slider 的等价实现。
+           轨道缩略图 = 全量 2086 天历史；窗口 = 主图当前显示的范围。
+           按住手柄拖拽改窗口，按住中部整体平移，点轨道任意处把窗口移过去。
+           参考实现见 data/LAPLACE_DATA.md 第四节。 -->
+      <div class="gr" id="gr">
+        <div class="gr-bar">
+          <span class="gr-cap">浏览范围</span>
+          <div class="gr-presets" id="gr-presets" role="group" aria-label="快速选择范围">
+            <button type="button" data-d="30">30天</button>
+            <button type="button" data-d="90">90天</button>
+            <button type="button" data-d="365">1年</button>
+            <button type="button" data-d="0">全部</button>
+          </div>
+          <span class="gr-read" id="gr-read"></span>
+        </div>
+        <div class="gr-track" id="gr-track" tabindex="0" role="slider"
+             aria-label="图表显示范围，左右方向键移动，Shift+方向键调整宽度"
+             aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <svg class="gr-svg" id="gr-svg" aria-hidden="true"></svg>
+          <div class="gr-win" id="gr-win">
+            <i class="gr-h gr-hl" id="gr-hl" title="拖动调整起点"></i>
+            <i class="gr-mid" id="gr-mid" title="拖动平移"></i>
+            <i class="gr-h gr-hr" id="gr-hr" title="拖动调整终点"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="gh-foot">
+        <span class="gh-lg"><i class="gh-sw gh-sw-bar"></i>每日净增</span>
+        <span class="gh-lg"><i class="gh-sw gh-sw-line"></i>在舰总数</span>
+        <!-- 柱稀疏不是图表坏了：VTBs 只在数值变化时落一条记录，
+             长期平稳的日子净增就是 0，没有柱子可画。 -->
+        <span class="gh-note" id="gh-note"></span>
+      </div>
+    </div>
+
+    <div class="gd" id="gd">
+      <div class="gd-bar">
+        <span class="gd-title">在舰成员</span>
+        <span class="gd-meta" id="gd-meta"></span>
+        <span class="gd-hint" id="gd-hint">按住拖动 · 手机左右滑</span>
+      </div>
+      <!-- 遮罩挂在 .gd-stage 上而不是 .gd-view 上：
+           .gd-view 是滚动容器，挂在它里面的元素会跟着 scrollLeft 一起滚走。 -->
+      <div class="gd-stage" id="gd-stage">
+        <div class="gd-view" id="gd-view" tabindex="0"
+             role="region" aria-label="在舰成员名单，可横向拖动浏览">
+          <div class="gd-track" id="gd-track"></div>
+        </div>
+      </div>
+      <div class="gd-prog" aria-hidden="true"><i id="gd-prog"></i></div>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <article class="card wide">
+      <h3>每月动态数<span class="src-chips" id="src-month"></span></h3>
+      <p class="card-sub">柱高 = 当月条数 · 悬停查看 · 点击跳到该月</p>
+      <div class="bars" id="bars-month"></div>
+      <div class="bar-axis" id="bar-axis"></div>
+    </article>
+
+    <article class="card">
+      <h3>年份分布<span class="src-chips" id="src-year"></span></h3>
+      <div class="year-rows" id="year-rows"></div>
+    </article>
+
+    <article class="card">
+      <h3>发帖时刻<span class="src-chips" id="src-hour"></span></h3>
+      <p class="card-sub">21–23 点是她的主场</p>
+      <div class="hours" id="hours"></div>
+      <div class="hlab" id="hour-axis"></div>
+    </article>
+
+    <article class="card">
+      <h3>星期<span class="src-chips" id="src-wd"></span></h3>
+      <div class="wds" id="wds"></div>
+    </article>
+
+    <article class="card wide">
+      <h3>高频词<span class="src-chips" id="src-cloud"></span></h3>
+      <p class="card-sub">按中文译文统计 · 越靠中心、字号越大 = 出现越多</p>
+      <div class="cloud-wrap">
+        <div class="cloud" id="cloud"></div>
+      </div>
+    </article>
+
+    <!-- 两张排行卡并作一行两栏。
+         原来各占 1/3 列，末行会空出右侧一整列；
+         用 span 3 的外框 + 内部 50/50 分栏，两边各自滚自己的。 -->
+    <div class="stats-halves">
+      <article class="card">
+        <h3>互动之最<span class="src-chips" id="src-like"></span></h3>
+        <p class="card-sub">按点赞数 · 点击跳到该条</p>
+        <div class="rank" id="rank-like"></div>
+      </article>
+
+      <article class="card">
+        <h3>最长的信<span class="src-chips" id="src-long"></span></h3>
+        <p class="card-sub">按正文字数 · 点击跳到该条</p>
+        <div class="rank" id="rank-long"></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============ GALLERY 动态图集 ============ -->
+<!-- 动态附图的集中展示：按发布时间倒序，一条动态一组。
+     图片只放缩略图（480w webp），点开灯箱才换 1080w 原图；
+     「看原文」按钮跳回 RING 页定位到那条动态。 -->
+<section id="v-gallery" class="view">
+  <div class="gal-head">
+    <div class="gal-title">
+      <span class="gal-kicker">GALLERY</span>
+      <h2 class="gal-h">动态图集</h2>
+    </div>
+    <div class="chips" id="gal-years" role="group" aria-label="按年份筛选"></div>
+  </div>
+
+  <!-- 副行：条数（主）在左、口径与来源（次）在右，与标题同属 1060 网格。
+       原先是两个平级块：#gal-src 直接挂在 .view 下，会撑满整行贴到屏幕
+       最左边，与标题错位；两行又都写着「共 146 张」。 -->
+  <div class="gal-sub">
+    <div class="gal-meta" id="gal-meta"></div>
+    <p class="view-src" id="gal-src"></p>
+  </div>
+  <div class="gal-list" id="gal-list"></div>
+</section>
+
+<!-- ============ STAGE 录制舞台 ============ -->
+<!-- 这一页不是给人「浏览」的，是给录屏用的：
+     画幅之外不留任何多余元素，所有控件都在画幅下方。
+     双击画幅 / 按 F 可以清空界面进入纯净录制态。 -->
+<section id="v-stage" class="view">
+
+  <div class="stg-bar">
+    <div class="stg-bar-l">
+      <span class="stg-kicker">STAGE</span>
+      <b>录制舞台</b>
+      <span class="stg-hint">选一段动态，播放、录制</span>
+    </div>
+    <div class="stg-bar-r">
+      <span class="stg-time" id="stg-time">00:00.0</span>
+      <span class="stg-count" id="stg-count">1 / 1</span>
+    </div>
+  </div>
+
+  <div class="stg-outer" id="stg-outer">
+    <div class="stg-frame" id="stg-frame" tabindex="0" role="application"
+         aria-label="动态效果舞台">
+      <div class="stg-scale" id="stg-scale">
+        <div class="stg-root" id="stg-root">
+         <div class="stg-inner" id="stg-inner">
+
+          <!-- 背景层（装饰用，所有场景共用） -->
+          <div class="stg-bg" aria-hidden="true">
+            <div class="stg-orb" id="stg-orb"></div>
+            <div class="stg-grain"></div>
+            <div class="stg-vig"></div>
+          </div>
+
+          <!-- 场景容器：同一时刻只有一个 .stg-scn.active -->
+          <div class="stg-stage" id="stg-stage">
+            <div class="stg-scn" data-scn="hero"></div>
+            <div class="stg-scn" data-scn="title"></div>
+            <div class="stg-scn" data-scn="quote"></div>
+            <div class="stg-scn" data-scn="cloud"></div>
+            <div class="stg-scn" data-scn="ring"></div>
+            <div class="stg-scn" data-scn="mood"></div>
+            <div class="stg-scn" data-scn="count"></div>
+            <div class="stg-scn" data-scn="bars"></div>
+            <div class="stg-scn" data-scn="hours"></div>
+            <div class="stg-scn" data-scn="words"></div>
+          </div>
+
+          <!-- 舞台上的进度条：画幅内唯一允许的非内容元素，录制时可关 -->
+          <div class="stg-prog" id="stg-prog" aria-hidden="true">
+            <i id="stg-prog-i"></i>
+          </div>
+
+          <!-- 顺序播放到最后一段时的提示。画幅内默认隐藏，
+               不污染录制画面；只在末尾出现 4 秒。 -->
+          <div class="stg-end" id="stg-end" role="status" aria-live="polite" hidden></div>
+
+         </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 控制台 ============ -->
+  <div class="stg-panel" id="stg-panel">
+
+    <div class="stg-ctl">
+      <div class="stg-transport">
+        <button class="stg-tb" id="stg-prev" type="button" aria-label="上一段" title="上一段 (←)">
+          <svg viewBox="0 0 16 16" width="13" height="13" fill="none" aria-hidden="true">
+            <path d="M10.5 3L5.5 8l5 5" stroke="currentColor" stroke-width="1.7"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button class="stg-play" id="stg-play" type="button" aria-label="播放" title="播放 / 暂停 (空格)">
+          <svg class="ip-play" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+            <path d="M4 2.6v10.8L13 8z" fill="currentColor"/>
+          </svg>
+          <svg class="ip-pause" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+            <rect x="4" y="2.8" width="3" height="10.4" rx="1" fill="currentColor"/>
+            <rect x="9" y="2.8" width="3" height="10.4" rx="1" fill="currentColor"/>
+          </svg>
+        </button>
+        <button class="stg-tb" id="stg-next" type="button" aria-label="下一段" title="下一段 (→)">
+          <svg viewBox="0 0 16 16" width="13" height="13" fill="none" aria-hidden="true">
+            <path d="M5.5 3l5 5-5 5" stroke="currentColor" stroke-width="1.7"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button class="stg-tb" id="stg-replay" type="button" aria-label="重播本段" title="重播本段 (R)">
+          <svg viewBox="0 0 16 16" width="13" height="13" fill="none" aria-hidden="true">
+            <path d="M13 8a5 5 0 1 1-1.6-3.7" stroke="currentColor" stroke-width="1.6"
+                  stroke-linecap="round"/>
+            <path d="M13 1.6V5h-3.4" stroke="currentColor" stroke-width="1.6"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <button class="stg-tb" id="stg-all" type="button" aria-pressed="false" title="循环播放：播完最后一段自动回到第一段（0）">
+          循环
+        </button>
+      </div>
+
+      <div class="stg-set">
+        <label class="stg-sel">
+          <span>画幅</span>
+          <select id="stg-fit">
+            <option value="16:9">16:9</option>
+            <option value="21:9">21:9</option>
+            <option value="4:3">4:3</option>
+            <option value="1:1">1:1</option>
+            <option value="9:16">9:16</option>
+          </select>
+        </label>
+        <label class="stg-sel">
+          <span>时长</span>
+          <select id="stg-dur">
+            <option value="4">4 秒</option>
+            <option value="6" selected>6 秒</option>
+            <option value="8">8 秒</option>
+            <option value="12">12 秒</option>
+          </select>
+        </label>
+        <button class="stg-tb" id="stg-prog-on" type="button" aria-pressed="true"
+                title="画幅内的进度条是否显示（录制时可关掉）">进度条</button>
+        <button class="stg-tb" id="stg-clean" type="button" title="隐藏所有界面，只留画幅（F）">
+          <svg viewBox="0 0 16 16" width="13" height="13" fill="none" aria-hidden="true">
+            <path d="M2 6V2h4M14 6V2h-4M2 10v4h4M14 10v4h-4" stroke="currentColor"
+                  stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <span>纯净</span>
+        </button>
+        <button class="stg-tb" id="stg-full" type="button" title="全屏画幅（双击画幅同效）">
+          <svg viewBox="0 0 16 16" width="13" height="13" fill="none" aria-hidden="true">
+            <rect x="2" y="3.5" width="12" height="9" rx="1.4" stroke="currentColor" stroke-width="1.5"/>
+            <path d="M2 6.4h12" stroke="currentColor" stroke-width="1.3"/>
+          </svg>
+          <span>全屏</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 素材列表：按顺序排列，可单独触发 -->
+    <div class="stg-list" id="stg-list" role="tablist" aria-label="动态素材"></div>
+
+  </div>
+</section>
+
+<!-- ============ ARCHIVE ============ -->
+<section id="v-archive" class="view">
+  <div class="arc-head">
+    <div class="search-box">
+      <svg viewBox="0 0 20 20" width="16" height="16" fill="none" aria-hidden="true">
+        <circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.6"/>
+        <path d="M13.5 13.5L17 17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+      <input id="q" type="search" placeholder="搜索正文（支持中文 / 日文）…" autocomplete="off" aria-label="搜索动态正文">
+      <button class="q-clear" id="q-clear" type="button" aria-label="清空搜索" title="清空 (Esc)">
+        <svg viewBox="0 0 12 12" width="10" height="10" fill="none" aria-hidden="true">
+          <path d="M2.5 2.5L9.5 9.5M9.5 2.5L2.5 9.5" stroke="currentColor"
+                stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+    <div class="chips" id="chips">
+      <button class="chip active" data-f="all">全部</button>
+      <button class="chip" data-f="img">含图</button>
+      <button class="chip" data-f="video">视频投稿</button>
+      <button class="chip" data-f="like">互动 &gt; 100</button>
+    </div>
+  </div>
+
+  <p class="view-src" id="arc-src"></p>
+
+  <div class="arc-meta" id="arc-meta"></div>
+  <div class="arc-list" id="arc-list"></div>
+  <button class="more" id="more" type="button">加载更多</button>
+  <div class="arc-end" id="arc-end" hidden>—— 到底了 ——</div>
+</section>
+
+<!-- ============ FILM 影像 ============ -->
+<section id="v-video" class="view">
+  <div class="film-head">
+    <div class="film-intro">
+      <div class="film-kicker">FILM &amp; REC</div>
+      <h2 class="film-title">影像录</h2>
+      <p class="film-desc">
+        她在 B 站投稿的全部影像，只留标题与链接，不下载视频本体。
+        点击任意一格，在原地展开播放器；右侧「录制」可把这一格导出成图片。
+      </p>
+      <p class="view-src" id="film-src"></p>
+    </div>
+    <div class="film-stat" id="film-stat"></div>
+  </div>
+
+  <!-- 筛选与工具条 -->
+  <div class="film-bar">
+    <div class="film-filters" id="film-years" role="group" aria-label="按年份筛选"></div>
+    <div class="film-tools">
+      <div class="seg" role="group" aria-label="排序">
+        <button class="seg-b active" data-sort="new" type="button">最新</button>
+        <button class="seg-b" data-sort="hot" type="button">最热</button>
+        <button class="seg-b" data-sort="old" type="button">最早</button>
+      </div>
+      <button class="film-btn" id="film-rec-all" type="button" title="把当前筛选下的全部影像导出为一张清单图">
+        <svg viewBox="0 0 16 16" width="13" height="13" fill="none" aria-hidden="true">
+          <circle cx="8" cy="8" r="5.2" stroke="currentColor" stroke-width="1.5"/>
+          <circle cx="8" cy="8" r="2.2" fill="currentColor"/>
+        </svg>
+        <span>录制清单</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 播放器（点击卡片后就地展开） -->
+  <div class="film-stage" id="film-stage" hidden>
+    <div class="fs-head">
+      <div class="fs-t">
+        <b id="fs-title"></b>
+        <span id="fs-meta"></span>
+      </div>
+      <div class="fs-act">
+        <a class="film-btn" id="fs-open" href="#" target="_blank" rel="noopener">在 B 站打开</a>
+        <button class="film-btn" id="fs-shot" type="button">录制这一帧</button>
+        <button class="fs-x" id="fs-close" type="button" aria-label="关闭播放器">×</button>
+      </div>
+    </div>
+    <div class="fs-frame" id="fs-frame"></div>
+    <!-- 常驻出口：iframe 被屏蔽 / 播放器内部渲染失败页时，
+         这里是用户唯一不用动脑的退路。做成横条而不是小字注脚。 -->
+    <p class="fs-note">
+      <span>内嵌播放器由 B 站提供，本站不代理、不缓存任何视频流。</span>
+      <a class="fs-note-go" id="fs-note-open" href="#" target="_blank" rel="noopener">
+        打不开？在 B 站观看 →
+      </a>
+    </p>
+  </div>
+
+  <div class="film-grid" id="film-grid"></div>
+  <div class="film-empty" id="film-empty" hidden>这一年没有影像投稿。</div>
+</section>
+
+</main>
+
+<footer class="ft">
+  <div class="ft-in">
+    <div class="ft-l">
+      <b>信</b>
+      <span>火羽ひのめ B站动态全记录</span>
+    </div>
+    <div class="ft-r">
+      <span id="ft-gen"></span>
+      <span class="dot">·</span>
+      <a href="https://space.bilibili.com/2094031249" target="_blank" rel="noopener">原主页</a>
+      <span class="dot">·</span>
+      <a href="https://www.bilibili.com/video/BV1fEpy67E9v/" target="_blank" rel="noopener">参考影像《信》</a>
+    </div>
+  </div>
+  <!-- 来源明细：把「数据从哪来」一次性讲清楚。
+       舰长数和动态数来自两个完全不同的站点，混在一起标会让人误以为是同一口径。 -->
+  <div class="ft-src">
+    <span class="fts-t">数据来源</span>
+    <span class="fts-i">
+      <b>动态 / 影像 / 全文</b>
+      <a href="https://space.bilibili.com/2094031249" target="_blank" rel="noopener">B站 UP 主个人空间</a>
+      <em>公开动态，自建脚本全量抓取</em>
+    </span>
+    <span class="fts-i">
+      <b>逐月舰长数（历史序列）</b>
+      <a href="https://vtbs.moe/detail/2094031249" target="_blank" rel="noopener">VTBs</a>
+      <em>socket.io 事件 bulkGuardCompressed，2879 条实测观测</em>
+    </span>
+    <span class="fts-i">
+      <b>当前在舰数</b>
+      <a href="https://live.bilibili.com/22748536" target="_blank" rel="noopener">B站官方接口 guardTab</a>
+      <em>公开免登录，取 data.info.num</em>
+    </span>
+  </div>
+  <p class="ft-note">
+    本站为静态展示，数据来源于 UP 主公开发布的 B站动态。视频投稿仅保留文案与链接，不包含视频媒体文件。
+    「舰长数」为月末在舰存量，非当月新增人次；缺测月份如实留空，未做任何估算填补。
+  </p>
+</footer>
+
+<div class="tip" id="tip" hidden></div>
+<div class="lightbox" id="lightbox" hidden><img alt=""><button class="lb-close" aria-label="关闭">×</button></div>
+
+<script src="assets/cloud.js"></script>
+<script src="assets/stage.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>

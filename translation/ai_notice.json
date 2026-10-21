@@ -1,0 +1,91 @@
+{
+ "_ai_notice": "[AI-TRANS] 全院译文标注总清单｜本内容由 AI 机器翻译生成，未经人工逐条校对，含义可能不准确；请以日文原文为准，并需人工复核。",
+ "marker": "AI-TRANS",
+ "notice_zh": "本内容由 AI 机器翻译生成，未经人工逐条校对，含义可能不准确；请以日文原文为准，并需人工复核。",
+ "notice_ja": "この翻訳は AI（機械翻訳）による自動生成です。内容が不正確な場合があります。原文を必ず参照してください。",
+ "review_required": true,
+ "generated_at": "2026-10-22 02:22:44",
+ "rule": "translation/ja2zh.json 中除 human_confirmed_ids 以外的条目均为 AI 机器翻译，一律带本标注；human_confirmed_ids 里的是人工确认过的真值，不带 AI 标注。检索方式：grep -rn 'AI-TRANS' .",
+ "summary": {
+  "translated_total": 2163,
+  "ai_generated": 2162,
+  "human_confirmed": 1
+ },
+ "human_confirmed_ids": [
+  "1261319328088719364"
+ ],
+ "locations": [
+  {
+   "file": "translation/ja2zh.json",
+   "kind": "译文数据（AI 生成）",
+   "form": "同目录 ja2zh.README.md 声明 + ai_notice.json 登记",
+   "scope": "2162 条（除 human_confirmed_ids 外全部）"
+  },
+  {
+   "file": "site/assets/data/posts.json",
+   "kind": "站点数据 zh 字段（AI 生成，构建产物）",
+   "form": "生成脚本 build_site_data.py 内 AI-TRANS 注释 + 本清单登记",
+   "scope": "2162 条 zh（数组结构无法加键，故不内嵌标注）"
+  },
+  {
+   "file": "translation/fixes.json",
+   "kind": "人工确认（非 AI）",
+   "form": "_ai_notice 键",
+   "scope": "1 条"
+  },
+  {
+   "file": "translation/glossary_patch.json",
+   "kind": "AI 生成的术语补丁",
+   "form": "_ai_notice 键",
+   "scope": "全部 terms"
+  },
+  {
+   "file": "translation/review_100_llm.json",
+   "kind": "AI 重译样本",
+   "form": "_ai_notice 键",
+   "scope": "items 全部条目"
+  },
+  {
+   "file": "translation/audit_report.json",
+   "kind": "AI 机器审计",
+   "form": "_ai_notice 键",
+   "scope": "suspects 全部条目"
+  },
+  {
+   "file": "translate_dynamics.py",
+   "kind": "译文生产脚本",
+   "form": "AI-TRANS 注释块",
+   "scope": "文件头 + 写盘处"
+  },
+  {
+   "file": "build_site_data.py",
+   "kind": "译文注入站点",
+   "form": "AI-TRANS 注释块",
+   "scope": "zh 字段注入处"
+  },
+  {
+   "file": "apply_fixes.py",
+   "kind": "人工修正回写",
+   "form": "AI-TRANS 注释块",
+   "scope": "文件头"
+  },
+  {
+   "file": "site/assets/app.js",
+   "kind": "前端渲染译文",
+   "form": "AI-TRANS 注释",
+   "scope": "译文渲染处"
+  },
+  {
+   "file": "site/index.html",
+   "kind": "UI 文案（面向读者的免责说明）",
+   "form": "AI-TRANS 注释 + 可见文案 .lv-ainote",
+   "scope": "信笺头部"
+  },
+  {
+   "file": "site/assets/style.css",
+   "kind": "UI 样式",
+   "form": "AI-TRANS 注释",
+   "scope": ".lv-ainote"
+  }
+ ]
+}
