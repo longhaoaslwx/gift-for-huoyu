@@ -21,6 +21,11 @@ MEDIA_SRC = os.path.join(SRC, "media")
 MEDIA_DST = os.path.join(ROOT, "site", "assets", "images", "media")
 TRANS = os.path.join(ROOT, "translation", "ja2zh.json")
 
+# 全部时间按北京时间（固定 +08:00）处理：动态归属的月份牌、时段/星期
+# 统计都由此派生，GitHub Actions runner 是 UTC 时区，用本地时间会让
+# 本地与 CI 的产出不一致，跨日的动态还会被归错月份。
+CST = datetime.timezone(datetime.timedelta(hours=8))
+
 
 def load(p, d=None):
     with open(p, encoding="utf-8") as f:
@@ -71,7 +76,7 @@ def main():
             continue
         seen.add(pid)
         ts = int(r["pub_ts"])
-        d = datetime.datetime.fromtimestamp(ts)
+        d = datetime.datetime.fromtimestamp(ts, CST)
         video = r.get("video") or None
         if video:
             video = {
@@ -279,8 +284,8 @@ def main():
             break
 
     total_chars = sum(len(p["text"]) for p in posts)
-    d0 = datetime.datetime.fromtimestamp(posts[0]["ts"])
-    d1 = datetime.datetime.fromtimestamp(posts[-1]["ts"])
+    d0 = datetime.datetime.fromtimestamp(posts[0]["ts"], CST)
+    d1 = datetime.datetime.fromtimestamp(posts[-1]["ts"], CST)
 
     def strip_prefix(t):
         """去掉固定片头，只留这条动态真正的内容，用于榜单展示。"""
@@ -307,7 +312,7 @@ def main():
     # guard.json 仍保留在 data/ 下备查，只是不再进入 meta.json。
 
     meta = {
-        "generated_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "generated_at": datetime.datetime.now(CST).strftime("%Y-%m-%d %H:%M:%S"),
         "uid": index.get("uid"),
         "name": "火羽ひのめ",
         # 头像：本地化避免 B 站 CDN 防盗链，前端仍带失败兜底

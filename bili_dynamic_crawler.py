@@ -77,6 +77,12 @@ MIXIN_KEY_ORDER = [
 # 因此发布时间无需请求详情接口，可直接从 ID 解码。
 OPUS_ID_TS_OFFSET = 1498838400  # 对应 2025-01-01 00:00:00
 
+# 站点面向中文读者，全部时间一律按北京时间（固定 +08:00）输出。
+# 不用 time.localtime()：GitHub Actions runner 是 UTC 时区，会把每条
+# pub_time 拧成 UTC，导致本地与 CI 产出的数据不一致、跨日的动态还会
+# 被归错月份。
+CST = datetime.timezone(datetime.timedelta(hours=8))
+
 # 需要跳过的动态类型（视频、番剧、课程等非图文内容）
 SKIP_TYPES = {
     "DYNAMIC_TYPE_AV",
@@ -660,7 +666,8 @@ def build_records(items, cache):
             "id": oid,
             "url": "https://www.bilibili.com/opus/" + oid,
             "pub_ts": ts,
-            "pub_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ts)) if ts else None,
+            "pub_time": datetime.datetime.fromtimestamp(
+                ts, CST).strftime("%Y-%m-%d %H:%M:%S") if ts else None,
             "type": "video" if has_video_link else "text",
             "text": text,
             "images": images,
@@ -879,7 +886,7 @@ def stage_build(uid, paths, client, host_name=None, no_web_check=False):
         "uid": uid,
         "host_name": host_name or "",
         "host_url": f"https://space.bilibili.com/{uid}/dynamic",
-        "generated_at": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+        "generated_at": datetime.datetime.now(CST).strftime("%Y-%m-%d %H:%M:%S"),
         "total_records": len(records),
         "with_time": len(dated),
         "without_time": len(records) - len(dated),
@@ -934,8 +941,9 @@ def stage_log(paths, index, client, elapsed, args):
         "python": sys.version.split()[0],
         "argv": sys.argv,
         "uid": args.uid,
-        "started_at": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - elapsed)),
-        "finished_at": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
+        "started_at": datetime.datetime.fromtimestamp(
+            time.time() - elapsed, CST).strftime("%Y-%m-%d %H:%M:%S"),
+        "finished_at": datetime.datetime.now(CST).strftime("%Y-%m-%d %H:%M:%S"),
         "elapsed_seconds": round(elapsed, 1),
         "http_requests": client.request_count,
         "pace_seconds": client.pace,
