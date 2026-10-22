@@ -5,6 +5,11 @@ on:
   schedule:
     - cron: '30 16 * * *'
   workflow_dispatch:      # 也允许手动触发，方便随时补一次
+    inputs:
+      refresh_stats:
+        description: '全量重抓详情刷新历史互动数据（约1.5小时，默认关闭；日常增量更新不用勾）'
+        type: boolean
+        default: false
 
 permissions:
   contents: write         # 要把更新后的数据提交回仓库
@@ -28,14 +33,26 @@ jobs:
       # 由基线 + build 阶段的存量合并保住，这里每天只抓新增的几个条目。
       # 注意：不要再用 actions/cache 缓存 data/bilibili——旧缓存会把境外
       # IP 抓到的 600 条版本盖回已提交的 2165 条基线，造成数据丢失。
+      # 日常跑：只抓增量 + 用列表接口刷新近期约 600 条的点赞（零额外请求）；
+      # 手动勾选 refresh_stats：额外重抓全部详情，把历史条目的点赞/评论/
+      # 转发也刷成当前值（约 1.5 小时，见 monthly-refresh.yml 的自动版）。
       - name: 拉取最新动态
-        run: python bili_dynamic_crawler.py --pace 1.2 --no-web-check
+        run: |
+          if [ "${{ github.event.inputs.refresh_stats }}" = "true" ]; then
+            echo "== 全量刷新模式：重抓全部详情 =="
+            python bili_dynamic_crawler.py --refresh-stats --pace 2.0 --no-web-check
+          else
+            python bili_dynamic_crawler.py --pace 1.2 --no-web-check
+          fi
 
       # translate_dynamics.py 天然跳过已有译文，只会补新增的几条；
-      # apply_fixes.py 再把人工确认过的译文盖回去（防机翻冲掉人工真值）。
+      # sync_translations.py 在全刷后找出正文有变化的老条目定向重译
+      # （日常增量模式下零变化、零请求）；apply_fixes.py 再把人工确认过
+      # 的译文盖回去（防机翻冲掉人工真值）。
       - name: 补齐新增译文并回写人工修正
         run: |
           python translate_dynamics.py
+          python sync_translations.py
           python apply_fixes.py
 
       # 新增动态的配图/视频封面（只补缺失的文件，已存在的跳过；

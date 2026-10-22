@@ -24,6 +24,7 @@ translate_dynamics.py     翻译：ja→zh 机翻 + 术语占位符 + 正则矫�
 build_site_data.py        构建：原始数据 → site/assets/data/（含媒体拷贝与去重）
 apply_fixes.py            回写人工确认过的译文（translation/fixes.json）
 mark_ai_translations.py   给 AI 译文打统一标注，产出 translation/ai_notice.json
+sync_translations.py      全刷后对比新旧 all.json，定向重译正文有变化的条目
 fetch_media_thumbs.py     抓取新增动态配图（480w/1080w 两档 WebP，只补缺失）
 fetch_covers.py           抓取新增视频封面缩略图（只补缺失）
 
@@ -34,6 +35,7 @@ translation/
 
 .github/workflows/
   daily-update.yml        北京时间每天 0:30 自动抓新数据 → 补译 → 重建 → 提交
+  monthly-refresh.yml     北京时间每月 1 号 14:00 全量重抓详情，刷新历史互动数据
   deploy-pages.yml        把 site/ 发布到 GitHub Pages（根路径，不经 Jekyll）
 ```
 
@@ -51,6 +53,21 @@ translation/
 5. 有变化才提交（提交者 `github-actions[bot]`），基线数据增量一并入库。
 
 也可在 Actions 页手动 `Run workflow` 立刻补一次。
+
+## 互动数据的刷新机制
+
+两类数据更新频率不同，机制也不同：
+
+- **新动态 + 近期约 600 条的点赞**：每日更新自动搞定。列表接口每次都会
+  重新拉取并带回最新点赞，`build_records` 优先用它刷新缓存旧值，
+  所以点赞榜、月度/年度点赞曲线每天自动变。
+- **历史条目的点赞/评论/转发**：列表接口不返回这些字段，只有重抓全部
+  详情才能刷新。由 `monthly-refresh.yml` 在**北京时间每月 1 号 14:00**
+  自动全刷一次（约 1.5 小时，pace 2.0 降低风控概率）；想立刻刷就进
+  Actions → 「每日更新动态数据」→ Run workflow → 勾选
+  **refresh_stats** → 运行，同样全程在线上完成，不需要本地操作。
+- 全刷后少数老动态的正文可能因接口返回差异而变化，
+  `sync_translations.py` 会自动对比新旧数据并定向重译这些条目。
 
 ## 站点部署
 

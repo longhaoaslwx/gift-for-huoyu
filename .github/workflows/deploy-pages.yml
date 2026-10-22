@@ -2,14 +2,15 @@ name: 部署站点到 Pages
 
 # 三个触发源：
 #   1) push 到 main：本地改了代码/工作流后重新部署；
-#   2) workflow_run：每日更新工作流跑完后接住它——机器人（GITHUB_TOKEN）
-#      的推送不会触发 push 事件，若不靠 workflow_run，数据更新后站点不会刷新；
+#   2) workflow_run：数据类工作流跑完后接住它们——机器人（GITHUB_TOKEN）
+#      的推送不会触发 push 事件，若不靠 workflow_run，数据更新后站点不会
+#      刷新。每日更新与每月全刷两个都要监听；
 #   3) workflow_dispatch：手动补一次部署。
 on:
   push:
     branches: [main]
   workflow_run:
-    workflows: ["每日更新动态数据"]
+    workflows: ["每日更新动态数据", "每月全量刷新互动数据"]
     types: [completed]
   workflow_dispatch:
 

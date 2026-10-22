@@ -1,0 +1,67 @@
+name: 每月全量刷新互动数据
+
+# 历史动态（列表接口不返回的那 1557 条）的点赞/评论/转发不会随每日更新
+# 变动，需要定期重抓全部详情才能刷新。全刷约 2100 个请求、1.5 小时以上，
+# 放在每日 CI 里太浪费也可能触发风控，故每月一次：
+#   北京时间每月 1 号 14:00 = UTC 每月 1 号 06:00
+# （选下午是刻意与每日更新的 0:30 错开，避免两个工作流同时抓取、同时提交）
+on:
+  schedule:
+    - cron: '0 6 1 * *'
+  workflow_dispatch:      # 也可随时手动触发一次全刷
+
+permissions:
+  contents: write
+
+concurrency:
+  group: monthly-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # --refresh-stats：对缓存里所有非终态条目重抓一次详情。
+      # pace 2.0 比日常的 1.2 保守，降低境外 IP 连续请求触发风控的概率；
+      # 即便偶尔失败也不影响站点（数据以上次提交的为准，下月再试）。
+      - name: 全量重抓详情刷新互动数据
+        run: python bili_dynamic_crawler.py --refresh-stats --pace 2.0 --no-web-check
+
+      # 正文若有变化（作者编辑过动态、或接口对老动态返回差异），对应译文
+      # 需要重翻；sync_translations.py 用 git show 对比新旧 all.json 找出
+      # text 变化的条目并定向重译，没变化时零请求秒过。
+      - name: 重译正文有变化的条目并回写人工修正
+        run: |
+          python sync_translations.py
+          python apply_fixes.py
+
+      - name: 抓取新增图片
+        run: |
+          python fetch_media_thumbs.py
+          python fetch_covers.py
+
+      - name: 重建站点数据
+        run: python build_site_data.py
+
+      - name: 同步 AI 翻译标注统计
+        run: python mark_ai_translations.py
+
+      - name: 提交变更
+        run: |
+          set -e
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A site/assets/data site/assets/images/media translation/ja2zh.json translation/ai_notice.json \
+                    data/bilibili/2094031249/dynamics/all.json data/bilibili/2094031249/raw/detail_cache.json
+          if git diff --cached --quiet; then
+            echo "数据无变化，跳过提交"
+            exit 0
+          fi
+          git commit -m "chore(data): 每月全量刷新互动数据 $(date -u +'%Y-%m-%d %H:%M UTC')"
+          git push

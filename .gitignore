@@ -24,6 +24,7 @@
 !/bili_dynamic_crawler.py
 !/build_site_data.py
 !/translate_dynamics.py
+!/sync_translations.py
 !/apply_fixes.py
 !/mark_ai_translations.py
 !/fix_translations.py
