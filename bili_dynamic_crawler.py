@@ -35,6 +35,7 @@ import hashlib
 import json
 import os
 import random
+import re
 import sys
 import time
 import urllib.error
@@ -490,7 +491,8 @@ def fetch_item(client, oid, tag=""):
     return 0, (data2.get("item") or {})
 
 
-def stage_detail(uid, paths, client, limit=None, id_file=None, retry_failed=False):
+def stage_detail(uid, paths, client, limit=None, id_file=None,
+                 retry_failed=False, refresh_stats=False):
     log("\n[2/4] 逐条补全详情（发布时间 / 全部图片 / 正文）")
     items = load_json(paths.list_json, [])
 
@@ -504,30 +506,43 @@ def stage_detail(uid, paths, client, limit=None, id_file=None, retry_failed=Fals
         ext = load_json(id_file, [])
         ids = [str(x["id"] if isinstance(x, dict) else x) for x in ext]
         log(f"  [detail] 外部 id 清单 {len(ids)} 条 ← {id_file}")
+    elif refresh_stats:
+        # 全量刷新互动数据：对缓存里所有非终态条目重抓一次详情。
+        # 日常更新靠列表接口刷新近期约 600 条（零额外请求），历史条目的
+        # 点赞停留在入库快照；想让历史也变成当前值时才手动跑这个模式
+        # （约 2100 次请求、40 分钟以上，只建议本地跑，别放进每日 CI）。
+        ids = [oid for oid, v in cache.items()
+               if not (isinstance(v, dict) and v.get("invisible"))]
+        log(f"  [detail] --refresh-stats：全量刷新 {len(ids)} 条的互动数据")
     else:
         if not items:
             log("  [error] 缺少清单文件，请先执行 --stage list，或改用 --id-file")
             return {}
         ids = [x["opus_id"] for x in items if x.get("opus_id")]
 
-    def need(oid):
-        """判断某条是否还需要抓：缺失、上次失败（且允许重试）、或空壳待复核。"""
-        v = cache.get(oid)
-        if v is None:
-            return True
-        if not isinstance(v, dict):
-            return True
-        if v.get("failed") and not v.get("invisible") and retry_failed:
-            return True
-        # 空壳：既无正文也无图、且没判定类型 —— 需要用 desktop 接口复核
-        if (not v.get("failed") and not v.get("text") and not v.get("images")
-                and not v.get("dyn_type")):
-            return True
-        # 视频投稿类：早期被整条排除，缓存里没有 video 卡片，需要重抓以补链接与文案
-        if (v.get("dyn_type") in VIDEO_DYNAMIC_TYPES
-                and not (v.get("video") or {}).get("url")):
-            return True
-        return False
+    if refresh_stats:
+        def need(oid):
+            v = cache.get(oid)
+            return not (isinstance(v, dict) and v.get("invisible"))
+    else:
+        def need(oid):
+            """判断某条是否还需要抓：缺失、上次失败（且允许重试）、或空壳待复核。"""
+            v = cache.get(oid)
+            if v is None:
+                return True
+            if not isinstance(v, dict):
+                return True
+            if v.get("failed") and not v.get("invisible") and retry_failed:
+                return True
+            # 空壳：既无正文也无图、且没判定类型 —— 需要用 desktop 接口复核
+            if (not v.get("failed") and not v.get("text") and not v.get("images")
+                    and not v.get("dyn_type")):
+                return True
+            # 视频投稿类：早期被整条排除，缓存里没有 video 卡片，需要重抓以补链接与文案
+            if (v.get("dyn_type") in VIDEO_DYNAMIC_TYPES
+                    and not (v.get("video") or {}).get("url")):
+                return True
+            return False
 
     todo = [oid for oid in ids if need(oid)]
     if limit:
@@ -574,6 +589,19 @@ def decode_ts_from_opus_id(opus_id):
         return (int(opus_id) >> 32) + OPUS_ID_TS_OFFSET
     except (TypeError, ValueError):
         return None
+
+
+def parse_count(s):
+    """解析列表接口的互动数字：'1234' 或 '1.2万'（B 站两种都可能返回）。"""
+    s = (s or "").strip()
+    if not s:
+        return None
+    if s.isdigit():
+        return int(s)
+    m = re.fullmatch(r"([\d.]+)\s*万", s)
+    if m:
+        return int(float(m.group(1)) * 10000)
+    return None
 
 
 def build_records(items, cache):
@@ -646,9 +674,14 @@ def build_records(items, cache):
             ts = decode_ts_from_opus_id(oid)
 
         like_raw = ((o.get("stat") or {}).get("like") or "").strip()
-        stat = c.get("stat") or {}
-        if not stat.get("like") and like_raw.isdigit():
-            stat = {"like": int(like_raw), "comment": None, "forward": None}
+        stat = dict(c.get("stat") or {})
+        # 列表接口每次运行都会重新拉取，stat.like 是当下最新值——必须优先
+        # 刷新详情缓存里的旧快照，否则站点点赞榜/月度点赞曲线会永远停留在
+        # 动态首次入库时的数字（实测近期动态点赞日均有可见增长）。
+        # 评论/转发列表接口不给，仍沿用详情缓存的值。
+        lv = parse_count(like_raw)
+        if lv is not None:
+            stat["like"] = lv
 
         # 纯视频投稿可能既无正文也无配图，此时只要拿到视频卡片就应当保留
         has_video_link = bool(video and (video.get("url") or video.get("bvid")))
@@ -990,6 +1023,9 @@ def main():
                     help="跳过构建阶段的网页端交叉复核（省约 30 次请求）")
     ap.add_argument("--retry-failed", action="store_true",
                     help="重试此前标记为失败的条目（不含已确认不可见的）")
+    ap.add_argument("--refresh-stats", action="store_true",
+                    help="全量重抓详情刷新互动数据（约 2100 次请求、40 分钟以上，"
+                         "只建议本地手动跑；日常更新靠列表接口刷新近期约 600 条）")
     a = ap.parse_args()
 
     t0 = time.time()
@@ -1010,7 +1046,8 @@ def main():
         stage_list(a.uid, paths, client, max_pages=a.max_pages)
     if a.stage in ("all", "detail"):
         stage_detail(a.uid, paths, client, limit=a.limit, id_file=a.id_file,
-                     retry_failed=a.retry_failed)
+                     retry_failed=a.retry_failed,
+                     refresh_stats=a.refresh_stats)
     if a.stage in ("all", "build"):
         index = stage_build(a.uid, paths, client, host_name=a.host_name,
                             no_web_check=a.no_web_check)
