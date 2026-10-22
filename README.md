@@ -5,6 +5,8 @@
 
 纯静态，无后端、无数据库。`site/` 是可以直接托管的全部内容。
 
+在线预览：**https://longhaoaslwx.github.io/gift-for-huoyu/**
+
 ## 目录
 
 ```
@@ -79,7 +81,7 @@ Pages 源设置为 **GitHub Actions**（Settings → Pages → Source），
   （机器人推送不触发 push 事件，必须这样接）；
 - 也可手动 `Run workflow` 补一次。
 
-不经 Jekyll、不复制文件，`https://<用户名>.github.io/gift-for-huoyu/` 直接就是站点首页。
+不经 Jekyll、不复制文件，`https://longhaoaslwx.github.io/gift-for-huoyu/` 直接就是站点首页。
 
 ## 本地复现
 
