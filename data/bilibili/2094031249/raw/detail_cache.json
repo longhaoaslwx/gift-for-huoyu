@@ -30159,5 +30159,18 @@
     "failed": true,
     "error_code": -1,
     "invisible": false
+  },
+  "1263917632956923913": {
+    "pub_ts": 1793117156,
+    "text": "今日もこの後から配信する！\n\n今日はちょっとリスナーの皆に相談があるんだよね\nそんな深刻なことではない",
+    "images": [],
+    "stat": {
+      "like": 2185,
+      "comment": 790,
+      "forward": 17
+    },
+    "official_title": "bilibili直播高能主播",
+    "dyn_type": "",
+    "forward_text": ""
   }
 }
